@@ -6,6 +6,17 @@ on:
   push:
     branches: [main]
     paths: ["infra/**"]
+  # Bổ sung trigger thủ công từ giao diện GitHub Actions
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Thao tác thực thi (apply hoặc destroy)'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 permissions:
   id-token: write
@@ -39,7 +50,19 @@ jobs:
         run: terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}
 
+      # -------------------------------------------------------------
+      # 1. TRƯỜNG HỢP DESTROY THỦ CÔNG (Chạy khi chọn destroy trên UI)
+      # -------------------------------------------------------------
+      - name: Terraform destroy
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      # -------------------------------------------------------------
+      # 2. BƯỚC PLAN VÀ COMMENT (Chỉ chạy khi KHÔNG PHẢI thao tác destroy)
+      # -------------------------------------------------------------
       - name: Terraform plan
+        if: github.event_name != 'workflow_dispatch' || inputs.action != 'destroy'
         id: plan
         run: terraform plan -no-color -out=tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -60,10 +83,15 @@ jobs:
             });
 
       - name: Fail nếu plan lỗi
-        if: steps.plan.outcome == 'failure'
+        if: (github.event_name != 'workflow_dispatch' || inputs.action != 'destroy') && steps.plan.outcome == 'failure'
         run: exit 1
 
-      - name: Terraform apply (chỉ khi merge vào main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # -------------------------------------------------------------
+      # 3. TRƯỜNG HỢP APPLY (Chạy khi Merge vào main HOẶC chọn apply thủ công)
+      # -------------------------------------------------------------
+      - name: Terraform apply
+        if: |
+          (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
