@@ -14,7 +14,7 @@ resource "aws_ecr_lifecycle_policy" "app" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1
-      description  = "Chỉ giữ 5 image gần nhất"
+      description  = "Chi giu 5 image gan nhat"
       selection = {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"

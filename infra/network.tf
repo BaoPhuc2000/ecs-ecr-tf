@@ -12,11 +12,11 @@ data "aws_subnets" "default" {
 
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project_name}-sg"
-  description = "Cho phép truy cập port ${var.container_port} để test trực tiếp qua Public IP"
+  description = "Cho phep truy cap port ${var.container_port} de test truc tiep qua Public IP"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "Test API trực tiếp (chỉ dùng cho lab, không dùng cho production)"
+    description = "Test API directly (lab only, not for production)"
     from_port   = var.container_port
     to_port     = var.container_port
     protocol    = "tcp"
